@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TOOLKIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+  echo "cptk-init: run this inside a git repository." >&2
+  exit 1
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+mkdir -p .cptk/tickets
+mkdir -p .claude
+
+copy_if_missing() {
+  local source="$1"
+  local target="$2"
+
+  if [[ -e "$target" ]]; then
+    echo "exists:  $target"
+  else
+    cp "$source" "$target"
+    echo "created: $target"
+  fi
+}
+
+copy_if_missing "$TOOLKIT_ROOT/templates/CLAUDE.md" "CLAUDE.md"
+copy_if_missing "$TOOLKIT_ROOT/templates/project-config.md" ".cptk/project-config.md"
+copy_if_missing "$TOOLKIT_ROOT/templates/project-settings.json" ".claude/settings.json"
+
+ensure_gitignore_entry() {
+  local entry="$1"
+
+  touch .gitignore
+
+  if grep -qxF "$entry" .gitignore; then
+    echo "gitignore: already present: $entry"
+  else
+    printf '%s\n' "$entry" >> .gitignore
+    echo "gitignore: added $entry"
+  fi
+}
+
+ensure_gitignore_entry ".cptk/tickets/*.status"
+
+echo
+echo "Initialized CPTK context in:"
+echo "  $REPO_ROOT"
+echo
+echo "Next:"
+echo "  1. Edit CLAUDE.md"
+echo "  2. Edit .cptk/project-config.md with the project's real validation commands"
+echo "  3. Edit .claude/settings.json so permissions.allow lists those same commands"
+echo "     (unlisted Bash commands prompt for approval every time, which defeats"
+echo "     running tickets unattended in parallel worktrees)"
+echo "  4. Create a ticket with: $TOOLKIT_ROOT/scripts/cptk-ticket TICKET-ID short-name"

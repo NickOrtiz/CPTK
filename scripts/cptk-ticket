@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: cptk-ticket <ticket-id> <short-name> [base-branch]" >&2
+  echo "Example: cptk-ticket ABC-123 hero develop" >&2
+  exit 1
+}
+
+[[ $# -lt 2 || $# -gt 3 ]] && usage
+
+TICKET_ID="$1"
+SHORT_NAME="$2"
+BASE_BRANCH="${3:-}"
+
+TOOLKIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+  echo "cptk-ticket: run this inside a git repository." >&2
+  exit 1
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+if [[ -z "$BASE_BRANCH" ]]; then
+  BASE_BRANCH="$(git branch --show-current)"
+fi
+
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "cptk-ticket: current worktree has uncommitted changes." >&2
+  echo "Commit/stash them before scaffolding another ticket." >&2
+  exit 1
+fi
+
+PROJECT_NAME="$(basename "$REPO_ROOT")"
+SAFE_TICKET="$(printf '%s' "$TICKET_ID" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
+SAFE_NAME="$(printf '%s' "$SHORT_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
+
+BRANCH="feature/${TICKET_ID}-${SAFE_NAME}"
+WORKTREE="$(dirname "$REPO_ROOT")/${PROJECT_NAME}-${TICKET_ID}-${SAFE_NAME}"
+
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+  echo "cptk-ticket: branch already exists: $BRANCH" >&2
+  exit 1
+fi
+
+if [[ -e "$WORKTREE" ]]; then
+  echo "cptk-ticket: target path already exists: $WORKTREE" >&2
+  exit 1
+fi
+
+echo "Base branch: $BASE_BRANCH"
+echo "New branch:  $BRANCH"
+echo "Worktree:    $WORKTREE"
+echo
+
+git worktree add "$WORKTREE" -b "$BRANCH" "$BASE_BRANCH"
+
+mkdir -p "$WORKTREE/.cptk/tickets"
+
+TICKET_FILE="$WORKTREE/.cptk/tickets/${TICKET_ID}.md"
+
+if [[ ! -e "$TICKET_FILE" ]]; then
+  sed \
+    -e "s/{{TICKET_ID}}/${TICKET_ID}/g" \
+    -e "s/{{TITLE}}/${SHORT_NAME}/g" \
+    "$TOOLKIT_ROOT/templates/ticket-context.md" > "$TICKET_FILE"
+fi
+
+echo
+echo "Ready:"
+echo "  cd \"$WORKTREE\""
+echo "  \$EDITOR \"$TICKET_FILE\""
+echo "  claude"
+echo
+echo "Then run inside Claude:"
+echo "  /start-ticket $TICKET_ID"

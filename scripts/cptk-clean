@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: cptk-clean <worktree-path> [--force]" >&2
+  exit 1
+}
+
+[[ $# -lt 1 || $# -gt 2 ]] && usage
+
+TARGET="$1"
+FORCE="${2:-}"
+
+if [[ "$FORCE" != "" && "$FORCE" != "--force" ]]; then
+  usage
+fi
+
+if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+  echo "cptk-clean: run this from the main repository or one of its worktrees." >&2
+  exit 1
+fi
+
+MAIN_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)"
+MAIN_ROOT="$(cd "$MAIN_ROOT/.." && pwd)"
+cd "$MAIN_ROOT"
+
+TARGET_ABS="$(cd "$(dirname "$TARGET")" 2>/dev/null && pwd)/$(basename "$TARGET")"
+
+if ! git worktree list --porcelain | grep -Fqx "worktree $TARGET_ABS"; then
+  echo "cptk-clean: not a registered worktree: $TARGET_ABS" >&2
+  exit 1
+fi
+
+if [[ -n "$(git -C "$TARGET_ABS" status --porcelain)" && "$FORCE" != "--force" ]]; then
+  echo "cptk-clean: worktree has uncommitted changes; refusing to remove it." >&2
+  echo "Review/commit the changes, or rerun with --force if you intentionally want to discard them." >&2
+  exit 1
+fi
+
+BRANCH="$(git -C "$TARGET_ABS" branch --show-current)"
+
+if [[ "$FORCE" == "--force" ]]; then
+  git worktree remove --force "$TARGET_ABS"
+else
+  git worktree remove "$TARGET_ABS"
+fi
+
+echo "Removed worktree: $TARGET_ABS"
+echo "Branch retained:   $BRANCH"
+echo
+echo "Delete the branch separately after you have confirmed it is merged:"
+echo "  git branch -d \"$BRANCH\""

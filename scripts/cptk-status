@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+  echo "cptk-status: run this inside a git repository or worktree." >&2
+  exit 1
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "Worktrees"
+echo "---------"
+git worktree list
+echo
+
+echo "Current worktree"
+echo "----------------"
+git status --short --branch
+echo
+
+echo "Ticket status (all worktrees)"
+echo "------------------------------"
+
+FOUND=0
+
+while IFS= read -r WT; do
+  [[ -d "$WT/.cptk/tickets" ]] || continue
+
+  for f in "$WT"/.cptk/tickets/*.status; do
+    [[ -e "$f" ]] || continue
+    FOUND=1
+
+    TICKET="$(basename "$f" .status)"
+    STATUS_VAL="$(grep -m1 '^STATUS:' "$f" | sed 's/^STATUS:[[:space:]]*//' || true)"
+    UPDATED_VAL="$(grep -m1 '^UPDATED:' "$f" | sed 's/^UPDATED:[[:space:]]*//' || true)"
+    SUMMARY_VAL="$(grep -m1 '^SUMMARY:' "$f" | sed 's/^SUMMARY:[[:space:]]*//' || true)"
+
+    printf '%-14s %-28s %-24s %s\n' "$TICKET" "${STATUS_VAL:-unknown}" "${UPDATED_VAL:-?}" "$WT"
+    [[ -n "$SUMMARY_VAL" ]] && printf '%14s %s\n' "" "$SUMMARY_VAL"
+  done
+done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
+
+if [[ "$FOUND" -eq 0 ]]; then
+  echo "(no .cptk/tickets/*.status files yet — /start-ticket and /review-ticket write one on completion)"
+fi
