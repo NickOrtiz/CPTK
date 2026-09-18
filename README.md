@@ -23,6 +23,8 @@ cp -R global/skills/* ~/.claude/skills/
 
 Review `global/settings.json` before copying it. It intentionally grants only read-only git commands plus a baseline of common, local, non-destructive validation commands (lint/typecheck/test/build across a few ecosystems) — nothing that pushes, installs packages, or touches git history.
 
+`git push` (and `git push --force`) are explicitly **denied**, not just left off the allow list. That's a real difference: an unlisted command still prompts for your approval and you can say yes in the moment; a `deny` rule is a hard block that Claude Code refuses outright, and no in-session approval can override it. If you ever want a session to push, do it yourself in a separate terminal, or deliberately remove that rule first — don't expect an approval prompt to offer it as a choice.
+
 ```bash
 cp global/settings.json ~/.claude/settings.json
 ```
