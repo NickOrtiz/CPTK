@@ -43,11 +43,15 @@ ensure_gitignore_entry() {
   fi
 }
 
-ensure_gitignore_entry ".cptk/tickets/*.status"
+ensure_gitignore_entry ".cptk/"
 
 echo
 echo "Initialized CPTK context in:"
 echo "  $REPO_ROOT"
+echo
+echo ".cptk/ is gitignored entirely — ticket context and status files stay local"
+echo "and never touch shared repo history. Only CLAUDE.md and .claude/settings.json"
+echo "are meant to be committed."
 echo
 echo "Next:"
 echo "  1. Edit CLAUDE.md"

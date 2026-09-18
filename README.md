@@ -50,11 +50,16 @@ CLAUDE.md
   settings.json
 ```
 
-and adds a `.gitignore` entry for `.cptk/tickets/*.status` (see [Check active worktrees](#check-active-worktrees) below).
+and adds a `.gitignore` entry for `.cptk/` — the whole directory is local-only and never touches shared repo history. Only `CLAUDE.md` and `.claude/settings.json` are meant to be committed:
+
+```bash
+git add CLAUDE.md .claude .gitignore
+git commit -m "Add CPTK project scaffolding"
+```
 
 It will not overwrite existing files.
 
-Edit `CLAUDE.md` and `.cptk/project-config.md` with the real project commands, architecture, and constraints.
+Edit `CLAUDE.md` and `.cptk/project-config.md` with the real project commands, architecture, and constraints. `project-config.md` stays local (it's under `.cptk/`) — if you want that documentation shared with your team, fold the relevant parts into `CLAUDE.md` instead, since that one is committed.
 
 ### Allow-list your validation commands
 
@@ -146,7 +151,7 @@ ABC-124        CHANGES REQUIRED             2026-09-18T14:40:00Z     ../project-
                Reviewer flagged missing focus trap in footer modal.
 ```
 
-This comes from `.cptk/tickets/<TICKET_ID>.status`, a short `STATUS:`/`UPDATED:`/`SUMMARY:` file that `/start-ticket` and `/review-ticket` write when they finish. Nothing to configure — it's part of those skills' return contract. `cptk-init` gitignores these automatically since they're regenerated scratch state, not something worth preserving in history.
+This comes from `.cptk/tickets/<TICKET_ID>.status`, a short `STATUS:`/`UPDATED:`/`SUMMARY:` file that `/start-ticket` and `/review-ticket` write when they finish. Nothing to configure — it's part of those skills' return contract. It's local-only, along with the rest of `.cptk/` — see [Initialize a project](#initialize-a-project) above.
 
 ## Clean up a finished worktree
 
