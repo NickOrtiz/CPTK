@@ -10,8 +10,6 @@ The goal is deliberately simple:
 - **Skill = reusable procedure**
 - **You = reviewer/integrator**
 
-Start small. Use the scripts manually before adding more automation.
-
 ## Install the personal Claude defaults
 
 From this repository:
@@ -174,16 +172,3 @@ These files encourage Claude to take local, reversible actions while keeping the
 - changing shared infrastructure
 - modifying secrets or environment files
 - broad refactors outside ticket scope
-
-## Recommended first-day workflow
-
-Do not automate more yet.
-
-1. Initialize one real project.
-2. Create two ticket worktrees.
-3. Run one Claude session in each.
-4. Let one agent implement while you review the other.
-5. Send defects back to the ticket's Claude session instead of fixing them yourself.
-6. Adjust these files based on the friction you actually encounter.
-
-That is enough to prove whether the workflow helps.
