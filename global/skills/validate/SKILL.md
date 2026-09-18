@@ -29,6 +29,14 @@ Rules:
 - If an unrelated pre-existing failure prevents a clean run, distinguish it from failures introduced by this ticket.
 - Avoid running unusually expensive suites unless the project instructions or change scope warrant them.
 
+## Common Rationalizations
+
+| Excuse | Reality |
+|--------|---------|
+| "This failure looks pre-existing, I'll skip it" | Confirm it against the base branch before dismissing it — don't assume. |
+| "The suite is slow, I'll skip the broader checks" | Run what the ticket's scope and project instructions call for; speed is not a reason to skip documented validation. |
+| "`--no-verify` will get this past the hook faster" | Never use skip flags as a shortcut. Fix the underlying failure. |
+
 Return:
 
 STATUS: PASS | FAIL | PARTIAL

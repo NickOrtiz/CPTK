@@ -23,6 +23,15 @@ fi
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+GIT_DIR_ABS="$(cd "$(git rev-parse --git-dir)" && pwd -P)"
+GIT_COMMON_ABS="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+
+if [[ "$GIT_DIR_ABS" != "$GIT_COMMON_ABS" ]]; then
+  echo "cptk-ticket: already inside a worktree ($REPO_ROOT)." >&2
+  echo "Run cptk-ticket from the main repository checkout, not from inside another ticket's worktree." >&2
+  exit 1
+fi
+
 if [[ -z "$BASE_BRANCH" ]]; then
   BASE_BRANCH="$(git branch --show-current)"
 fi
@@ -66,6 +75,45 @@ if [[ ! -e "$TICKET_FILE" ]]; then
     -e "s/{{TICKET_ID}}/${TICKET_ID}/g" \
     -e "s/{{TITLE}}/${SHORT_NAME}/g" \
     "$TOOLKIT_ROOT/templates/ticket-context.md" > "$TICKET_FILE"
+fi
+
+baseline_step() {
+  local label="$1"
+  shift
+  echo "+ $label"
+  if "$@"; then
+    echo "  ok: $label"
+  else
+    echo "  WARNING: $label failed — worktree may start from a broken baseline (possibly pre-existing, not necessarily caused by this ticket)." >&2
+  fi
+}
+
+cd "$WORKTREE"
+
+echo
+echo "Baseline check"
+echo "--------------"
+
+if [[ -f pnpm-lock.yaml ]]; then
+  baseline_step "pnpm install" pnpm install
+  baseline_step "pnpm test" pnpm test --if-present
+elif [[ -f yarn.lock ]]; then
+  baseline_step "yarn install" yarn install
+elif [[ -f package.json ]]; then
+  baseline_step "npm install" npm install
+  baseline_step "npm test" npm test --if-present
+elif [[ -f Cargo.toml ]]; then
+  baseline_step "cargo build" cargo build
+  baseline_step "cargo test" cargo test
+elif [[ -f go.mod ]]; then
+  baseline_step "go mod download" go mod download
+  baseline_step "go test" go test ./...
+elif [[ -f pyproject.toml ]] && command -v poetry >/dev/null 2>&1; then
+  baseline_step "poetry install" poetry install
+elif [[ -f requirements.txt ]]; then
+  baseline_step "pip install" pip install -r requirements.txt
+else
+  echo "(no recognized manifest — skipping automatic install/test baseline)"
 fi
 
 echo

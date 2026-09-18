@@ -36,6 +36,15 @@ Also read:
 
 Do not push code, force-reset, delete branches, or modify shared infrastructure unless explicitly instructed.
 
+## Common Rationalizations
+
+| Excuse | Reality |
+|--------|---------|
+| "The build/tests passed, so the UI must work" | Passing tests is not evidence the UI works. Drive it in a real browser yourself — step 8 exists because tests can't see the screen. |
+| "It's a small change, the independent review is overkill" | Small changes hide regressions too. Delegate to `reviewer` regardless of change size. |
+| "The reviewer found one minor thing, close enough" | Any material finding gets fixed and the relevant validation/review cycle repeated, not waved through. |
+| "I already validated once, no need to re-run after the fix" | A fix can introduce a new failure. Re-run `/validate` after every fix, not just once. |
+
 Before returning, write the same status to `.cptk/tickets/$ARGUMENTS.status` so `cptk-status` can report progress across parallel worktrees without opening each session:
 
 ```text

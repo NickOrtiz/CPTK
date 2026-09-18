@@ -88,6 +88,8 @@ Inside the new worktree it creates:
 .cptk/tickets/ABC-123.md
 ```
 
+It refuses to run from inside another ticket's worktree (preventing accidental nesting), and after creating the worktree it auto-detects the project's package manager/build tool (npm/yarn/pnpm, Cargo, Go modules, Poetry/pip) and runs install plus a baseline test pass, so a broken starting state is caught immediately instead of being mistaken for something the ticket broke. A failed baseline step is reported as a warning — the worktree is still created either way.
+
 Fill in the ticket context, then:
 
 ```bash
