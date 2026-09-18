@@ -103,6 +103,26 @@ Inside Claude:
 
 Repeat for other tickets to run several in parallel, each in its own terminal/session — that's the whole point of CPTK.
 
+### Grouping several tickets into one branch
+
+A worktree doesn't have to map to exactly one ticket. When a group of tickets are tightly related and likely to touch the same files — several small tickets under one larger issue, a set of changes to a shared tokens/config file — putting them on separate branches just creates merge conflicts to untangle later for no benefit. Use `--multi` to scaffold one worktree/branch for the whole group instead:
+
+```bash
+/path/to/cptk/scripts/cptk-ticket --multi ISSUE-B typography TYPO-01 TYPO-02 TYPO-03 --base develop
+```
+
+This creates a single branch (`feature/ISSUE-B-typography`) and worktree, with one ticket-context file per id: `.cptk/tickets/ISSUE-B.md` (fill this in as the issue-level overview) plus `.cptk/tickets/TYPO-01.md`, `TYPO-02.md`, `TYPO-03.md`. Work through them one at a time in the same session:
+
+```text
+/start-ticket TYPO-01
+/start-ticket TYPO-02
+/start-ticket TYPO-03
+```
+
+Each still gets the full `/start-ticket` treatment — research, implementation, validation, browser check, independent review — and writes its own `.status` file, so `cptk-status` shows every sub-ticket's progress under that one worktree. You lose intra-group parallelism (they run sequentially, not concurrently) but gain a single merge at the end instead of one per ticket — worth it whenever the tickets would otherwise collide.
+
+**Only run one `claude` session per worktree at a time.** Two sessions editing the same worktree concurrently will collide on uncommitted changes and git state — grouping tickets trades parallelism *within* the group for safety, it doesn't let you run them all at once in the same worktree.
+
 ## Check active worktrees
 
 ```bash

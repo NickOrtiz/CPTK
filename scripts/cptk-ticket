@@ -3,15 +3,46 @@ set -euo pipefail
 
 usage() {
   echo "Usage: cptk-ticket <ticket-id> <short-name> [base-branch]" >&2
+  echo "       cptk-ticket --multi <issue-id> <short-name> <sub-ticket-id>... [--base <branch>]" >&2
   echo "Example: cptk-ticket ABC-123 hero develop" >&2
+  echo "Example: cptk-ticket --multi ISSUE-B typography TYPO-01 TYPO-02 TYPO-03 --base develop" >&2
   exit 1
 }
 
-[[ $# -lt 2 || $# -gt 3 ]] && usage
+MULTI=0
+SUB_TICKETS=()
+BASE_BRANCH=""
 
-TICKET_ID="$1"
-SHORT_NAME="$2"
-BASE_BRANCH="${3:-}"
+if [[ "${1:-}" == "--multi" ]]; then
+  MULTI=1
+  shift
+  [[ $# -lt 3 ]] && usage
+
+  TICKET_ID="$1"
+  SHORT_NAME="$2"
+  shift 2
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --base)
+        [[ $# -lt 2 ]] && usage
+        BASE_BRANCH="$2"
+        shift 2
+        ;;
+      *)
+        SUB_TICKETS+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  [[ ${#SUB_TICKETS[@]} -eq 0 ]] && usage
+else
+  [[ $# -lt 2 || $# -gt 3 ]] && usage
+  TICKET_ID="$1"
+  SHORT_NAME="$2"
+  BASE_BRANCH="${3:-}"
+fi
 
 TOOLKIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -68,13 +99,28 @@ git worktree add "$WORKTREE" -b "$BRANCH" "$BASE_BRANCH"
 
 mkdir -p "$WORKTREE/.cptk/tickets"
 
-TICKET_FILE="$WORKTREE/.cptk/tickets/${TICKET_ID}.md"
+scaffold_ticket_file() {
+  local id="$1"
+  local title="$2"
+  local file="$WORKTREE/.cptk/tickets/${id}.md"
 
-if [[ ! -e "$TICKET_FILE" ]]; then
-  sed \
-    -e "s/{{TICKET_ID}}/${TICKET_ID}/g" \
-    -e "s/{{TITLE}}/${SHORT_NAME}/g" \
-    "$TOOLKIT_ROOT/templates/ticket-context.md" > "$TICKET_FILE"
+  if [[ ! -e "$file" ]]; then
+    sed \
+      -e "s/{{TICKET_ID}}/${id}/g" \
+      -e "s/{{TITLE}}/${title}/g" \
+      "$TOOLKIT_ROOT/templates/ticket-context.md" > "$file"
+  fi
+
+  printf '%s\n' "$file"
+}
+
+TICKET_FILE="$(scaffold_ticket_file "$TICKET_ID" "$SHORT_NAME")"
+
+SUB_FILES=()
+if [[ "$MULTI" -eq 1 ]]; then
+  for SUB_ID in "${SUB_TICKETS[@]}"; do
+    SUB_FILES+=("$(scaffold_ticket_file "$SUB_ID" "$SHORT_NAME")")
+  done
 fi
 
 baseline_step() {
@@ -119,8 +165,23 @@ fi
 echo
 echo "Ready:"
 echo "  cd \"$WORKTREE\""
-echo "  \$EDITOR \"$TICKET_FILE\""
-echo "  claude"
-echo
-echo "Then run inside Claude:"
-echo "  /start-ticket $TICKET_ID"
+
+if [[ "$MULTI" -eq 1 ]]; then
+  echo "  \$EDITOR \"$TICKET_FILE\"   # issue overview"
+  for SUB_FILE in "${SUB_FILES[@]}"; do
+    echo "  \$EDITOR \"$SUB_FILE\""
+  done
+  echo "  claude"
+  echo
+  echo "Then run inside Claude, one at a time in this same worktree/session"
+  echo "(one worktree = one active session; do not run these concurrently):"
+  for SUB_ID in "${SUB_TICKETS[@]}"; do
+    echo "  /start-ticket $SUB_ID"
+  done
+else
+  echo "  \$EDITOR \"$TICKET_FILE\""
+  echo "  claude"
+  echo
+  echo "Then run inside Claude:"
+  echo "  /start-ticket $TICKET_ID"
+fi
