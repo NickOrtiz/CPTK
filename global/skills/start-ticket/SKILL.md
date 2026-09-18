@@ -14,6 +14,8 @@ First look for:
 
 If the exact filename does not exist, inspect `.cptk/tickets/` and identify the intended ticket from the argument.
 
+If that file names a Teamwork task (an id or URL under "Teamwork task") and Teamwork MCP tools are available in this session, fetch that task's current title, description, and comments and treat them as the authoritative goal/acceptance criteria. Treat the file's own Goal/Acceptance/etc. sections as supplementary CPTK-specific notes, not a substitute — use them to fill in anything Teamwork doesn't cover (out-of-scope boundaries, validation expectations). If no Teamwork task is named, or no Teamwork tools are available, work from the file as written and ask for missing details rather than guessing.
+
 Also read:
 
 - `CLAUDE.md`

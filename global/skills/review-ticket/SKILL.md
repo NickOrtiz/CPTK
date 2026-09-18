@@ -8,7 +8,7 @@ Read:
 
 - `CLAUDE.md`
 - `.cptk/project-config.md` if present
-- the relevant file under `.cptk/tickets/`
+- the relevant file under `.cptk/tickets/` — if it names a Teamwork task and Teamwork MCP tools are available, fetch that task's current details too and review against the real acceptance criteria, not just what's in the local file
 - `git status`
 - the current diff against the branch's likely base
 

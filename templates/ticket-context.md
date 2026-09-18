@@ -1,5 +1,12 @@
 # {{TICKET_ID}} — {{TITLE}}
 
+## Teamwork task
+
+Task ID or URL (leave blank if this ticket isn't tracked in Teamwork):
+-
+
+If set, `/start-ticket` and `/review-ticket` fetch this task's current title, description, and comments via the Teamwork MCP tools and treat them as authoritative — you don't need to duplicate them below. Use the sections below only for anything Teamwork doesn't capture (CPTK-specific scope/validation notes), or if this ticket has no Teamwork task.
+
 ## Goal
 
 Describe the user/business outcome in 1–3 sentences.

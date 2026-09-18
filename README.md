@@ -88,6 +88,10 @@ Inside the new worktree it creates:
 
 It refuses to run from inside another ticket's worktree (preventing accidental nesting), and after creating the worktree it auto-detects the project's package manager/build tool (npm/yarn/pnpm, Cargo, Go modules, Poetry/pip) and runs install plus a baseline test pass, so a broken starting state is caught immediately instead of being mistaken for something the ticket broke. A failed baseline step is reported as a warning — the worktree is still created either way.
 
+### Tickets tracked in Teamwork (or another tracker)
+
+If tickets already live in Teamwork, you don't need to duplicate them into markdown. The ticket-context template has a "Teamwork task" field at the top — fill in the task id or URL and leave the rest blank. `/start-ticket` and `/review-ticket` fetch that task's current title, description, and comments via the Teamwork MCP tools and treat them as authoritative; the file's other sections are only for CPTK-specific notes Teamwork doesn't capture (out-of-scope boundaries, validation expectations) or for tickets with no Teamwork task at all. If Teamwork MCP tools aren't available in a given session, it falls back to asking for details instead of guessing.
+
 Fill in the ticket context, then:
 
 ```bash
