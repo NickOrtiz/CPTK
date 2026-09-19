@@ -1,5 +1,15 @@
 # CPTK — Claude Parallel Ticket Kit
-
+```bash
+   █████████  ███████████  ███████████ █████   ████
+  ███░░░░░███░░███░░░░░███░█░░░███░░░█░░███   ███░ 
+ ███     ░░░  ░███    ░███░   ░███  ░  ░███  ███   
+░███          ░██████████     ░███     ░███████    
+░███          ░███░░░░░░      ░███     ░███░░███   
+░░███     ███ ░███            ░███     ░███ ░░███  
+ ░░█████████  █████           █████    █████ ░░████
+  ░░░░░░░░░  ░░░░░           ░░░░░    ░░░░░   ░░░░ .
+```                                            
+                                                   
 **CPTK (Claude Parallel Ticket Kit)** is a lightweight toolkit for running multiple engineering tickets through Claude Code at once, unattended. Each ticket gets its own git worktree and its own Claude session — spin up five terminals, kick off five tickets, and let them work in parallel instead of babysitting one linear conversation. A small set of reusable agents (researcher, implementer, reviewer, debugger, accessibility-reviewer) and skills (`/start-ticket`, `/review-ticket`, `/validate`, `/integrate`) turn "do this ticket" into a repeatable pipeline — investigate, implement, validate, independently review, report status — with `git push`, force-push, and other destructive operations locked out by default. You stay the reviewer and integrator; Claude does the parallel legwork.
 
 The goal is deliberately simple:
