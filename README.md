@@ -103,6 +103,25 @@ Inside the new worktree it creates:
 .cptk/tickets/ABC-123.md
 ```
 
+### Choosing the path, branch and base
+
+Three options work in both single and `--multi` mode:
+
+| Option | Default | Use it when |
+|---|---|---|
+| `--base <branch>` | the current branch | You start from a branch other than the one checked out. The old third positional argument still works. |
+| `--branch <name>` | `feature/<ticket-id>-<short-name>` | The project names branches its own way, such as `team/hero`. |
+| `--path <dir>` | `../<project>-<ticket-id>-<short-name>` | The worktree must live somewhere specific. For example, a local WordPress site serves only its own `wp-content`, so each ticket gets a cloned site and its worktree goes in that clone's `wp-content`. |
+
+```bash
+/path/to/cptk/scripts/cptk-ticket 19813778 hero \
+  --base epic/redesign \
+  --branch redesign/hero \
+  --path "~/Local Sites/project-hero/app/public/wp-content"
+```
+
+`--path` accepts a directory that does not exist yet, or one that exists and is empty. Move a site tool's own copy of the folder out of the way first. A relative path resolves from where you run the command, and `~` expands to your home directory. The parent directory must already exist.
+
 It refuses to run from inside another ticket's worktree (preventing accidental nesting), and after creating the worktree it auto-detects the project's package manager/build tool (npm/yarn/pnpm, Cargo, Go modules, Poetry/pip) and runs install plus a baseline test pass, so a broken starting state is caught immediately instead of being mistaken for something the ticket broke. A failed baseline step is reported as a warning — the worktree is still created either way.
 
 ### Tickets tracked in Teamwork (or another tracker)

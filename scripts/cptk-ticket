@@ -2,9 +2,17 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: cptk-ticket <ticket-id> <short-name> [base-branch]" >&2
-  echo "       cptk-ticket --multi <issue-id> <short-name> <sub-ticket-id>... [--base <branch>]" >&2
+  echo "Usage: cptk-ticket <ticket-id> <short-name> [base-branch] [options]" >&2
+  echo "       cptk-ticket --multi <issue-id> <short-name> <sub-ticket-id>... [options]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --base <branch>    Branch to start from (default: the current branch)" >&2
+  echo "  --path <dir>       Where to create the worktree (default: ../<project>-<ticket-id>-<short-name>)." >&2
+  echo "                     The directory must not exist, or must be empty." >&2
+  echo "  --branch <name>    Name of the new branch (default: feature/<ticket-id>-<short-name>)" >&2
+  echo >&2
   echo "Example: cptk-ticket ABC-123 hero develop" >&2
+  echo "Example: cptk-ticket ABC-123 hero --base develop --branch team/hero --path ~/sites/hero/wp-content" >&2
   echo "Example: cptk-ticket --multi ISSUE-B typography TYPO-01 TYPO-02 TYPO-03 --base develop" >&2
   exit 1
 }
@@ -12,36 +20,58 @@ usage() {
 MULTI=0
 SUB_TICKETS=()
 BASE_BRANCH=""
+WORKTREE_PATH=""
+BRANCH_NAME=""
+POSITIONAL=()
 
 if [[ "${1:-}" == "--multi" ]]; then
   MULTI=1
   shift
-  [[ $# -lt 3 ]] && usage
+fi
 
-  TICKET_ID="$1"
-  SHORT_NAME="$2"
-  shift 2
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --base|--path|--branch)
+      [[ $# -lt 2 || -z "$2" ]] && usage
+      case "$1" in
+        --base) BASE_BRANCH="$2" ;;
+        --path) WORKTREE_PATH="$2" ;;
+        --branch) BRANCH_NAME="$2" ;;
+      esac
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    -*)
+      echo "cptk-ticket: unknown option: $1" >&2
+      usage
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
 
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --base)
-        [[ $# -lt 2 ]] && usage
-        BASE_BRANCH="$2"
-        shift 2
-        ;;
-      *)
-        SUB_TICKETS+=("$1")
-        shift
-        ;;
-    esac
-  done
-
-  [[ ${#SUB_TICKETS[@]} -eq 0 ]] && usage
+if [[ "$MULTI" -eq 1 ]]; then
+  [[ ${#POSITIONAL[@]} -lt 3 ]] && usage
+  TICKET_ID="${POSITIONAL[0]}"
+  SHORT_NAME="${POSITIONAL[1]}"
+  SUB_TICKETS=("${POSITIONAL[@]:2}")
 else
-  [[ $# -lt 2 || $# -gt 3 ]] && usage
-  TICKET_ID="$1"
-  SHORT_NAME="$2"
-  BASE_BRANCH="${3:-}"
+  [[ ${#POSITIONAL[@]} -lt 2 || ${#POSITIONAL[@]} -gt 3 ]] && usage
+  TICKET_ID="${POSITIONAL[0]}"
+  SHORT_NAME="${POSITIONAL[1]}"
+
+  # The base branch can still be given as the third positional argument.
+  if [[ ${#POSITIONAL[@]} -eq 3 ]]; then
+    if [[ -n "$BASE_BRANCH" ]]; then
+      echo "cptk-ticket: give the base branch once, either positionally or with --base." >&2
+      exit 1
+    fi
+    BASE_BRANCH="${POSITIONAL[2]}"
+  fi
 fi
 
 TOOLKIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -51,6 +81,7 @@ if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
   exit 1
 fi
 
+INVOKED_FROM="$(pwd)"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
@@ -77,18 +108,39 @@ PROJECT_NAME="$(basename "$REPO_ROOT")"
 SAFE_TICKET="$(printf '%s' "$TICKET_ID" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
 SAFE_NAME="$(printf '%s' "$SHORT_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
 
-BRANCH="feature/${TICKET_ID}-${SAFE_NAME}"
-WORKTREE="$(dirname "$REPO_ROOT")/${PROJECT_NAME}-${TICKET_ID}-${SAFE_NAME}"
+BRANCH="${BRANCH_NAME:-feature/${TICKET_ID}-${SAFE_NAME}}"
+
+if ! git check-ref-format --branch "$BRANCH" >/dev/null 2>&1; then
+  echo "cptk-ticket: not a valid branch name: $BRANCH" >&2
+  exit 1
+fi
+
+if [[ -n "$WORKTREE_PATH" ]]; then
+  # Expand a leading ~ and resolve relative paths against where the command was run.
+  WORKTREE_PATH="${WORKTREE_PATH/#\~/$HOME}"
+  [[ "$WORKTREE_PATH" != /* ]] && WORKTREE_PATH="$INVOKED_FROM/$WORKTREE_PATH"
+  WORKTREE="${WORKTREE_PATH%/}"
+else
+  WORKTREE="$(dirname "$REPO_ROOT")/${PROJECT_NAME}-${TICKET_ID}-${SAFE_NAME}"
+fi
 
 if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
   echo "cptk-ticket: branch already exists: $BRANCH" >&2
   exit 1
 fi
 
-if [[ -e "$WORKTREE" ]]; then
-  echo "cptk-ticket: target path already exists: $WORKTREE" >&2
+# An empty directory is fine (for example one a local site tool created); anything else is refused.
+if [[ -e "$WORKTREE" ]] && { [[ ! -d "$WORKTREE" ]] || [[ -n "$(ls -A "$WORKTREE")" ]]; }; then
+  echo "cptk-ticket: target path already exists and is not an empty directory: $WORKTREE" >&2
   exit 1
 fi
+
+if [[ ! -d "$(dirname "$WORKTREE")" ]]; then
+  echo "cptk-ticket: parent directory does not exist: $(dirname "$WORKTREE")" >&2
+  exit 1
+fi
+
+WORKTREE="$(cd "$(dirname "$WORKTREE")" && pwd -P)/$(basename "$WORKTREE")"
 
 echo "Base branch: $BASE_BRANCH"
 echo "New branch:  $BRANCH"
